@@ -130,7 +130,15 @@ load test_helper
   run govc vm.info ttylinux
   assert_success
 
-  run govc vm.destroy ttylinux
+  govc import.spec "$GOVC_IMAGES/$TTYLINUX_NAME.ovf" | \
+    jq '.Name = "ttylinux2" | .NetworkMapping[0].Network = "DC0_DVPG0" | .' | \
+    govc library.deploy -options - "my-content/$TTYLINUX_NAME"
+
+  run govc vm.info -r ttylinux2
+  assert_success
+  assert_matches DC0_DVPG0
+
+  run govc vm.destroy ttylinux ttylinux2
   assert_success
 
   item_id=$(govc library.info -json "/my-content/$TTYLINUX_NAME" | jq -r .[].id)
@@ -138,6 +146,6 @@ load test_helper
   run govc datastore.rm "contentlib-$library_id/$item_id" # remove library files out-of-band, forcing a deploy error below
   assert_success
 
-  run govc library.deploy "my-content/$TTYLINUX_NAME.ova" ttylinux2
+  run govc library.deploy "my-content/$TTYLINUX_NAME" ttylinux2
   assert_failure
 }
